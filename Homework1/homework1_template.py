@@ -58,10 +58,12 @@ def problem10 (A, c, d):
     return np.mean(np.where(c <= A <= d, A))
 
 def problem11 (A, k):
-    return ...
+    w, v = np.linalg.eig(A)
+    idx = w.argsort()[-k][::-1]
+    return v[:,idx]
 
 def problem12 (A, x):
-    return ...
+    return np.linalg.solve(A,x)
 
 def problem13 (A, x):
-    return ...
+    return np.linalg.solve(A.T,x.T).T
