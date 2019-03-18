@@ -14,51 +14,70 @@ def fPC (y, yhat):
 #%%
 def measureAccuracyOfPredictors (predictors, X, y):
     predictions = np.zeros(len(X))
-    for i, face in enumerate(X):
-        score = np.zeros(len(predictors))
-        for j, p in enumerate(predictors):
-            score[j] = face[p[0], p[1]] > face[p[2], p[3]]
-        predictions[i] = round(np.mean(score))
-    return fPC(predictions, y)
+    for i in range(np.shape(predictors)[0]):
+        # print(np.shape(predictors[i]))
+        c1 = predictors[i,0]
+        r1 = predictors[i,1]
+        c2 = predictors[i,2]
+        r2 = predictors[i,3]
+        predictions = np.append(predictions, X[:,c1,r1] > X[:,c2,r2])
+    yhat = np.mean(predictions, axis=0)
+    return fPC(y, yhat)
 
 #%%
 def permutate(L, N=2):
-    return np.array([a for a in itertools.permutations(enumerate(L),N)])
+    return np.array([a for a in itertools.permutations(enumerate(L),N)])[:,:,0]
 
 #%%
 def process_combinations(face):
     combinations = permutate(face.flatten())
-    thresh = (combinations[:,0,1] > combinations[:,1,1])[np.newaxis]
+    thresh = combinations[:,0,1] > combinations[:,1,1]
     return thresh
 #%%
 def stepwiseRegression (trainingFaces, trainingLabels, testingFaces, testingLabels, num_predictors=5):
     # multithread code for faster training
-    with Pool(cpu_count()) as p:
-        all_thresh = np.array(list(tqdm(p.imap(process_combinations, trainingFaces), total=len(trainingFaces))))
-    
-    # find the best `num_predictors` in all possible combinations
-    correct = np.zeros((1,np.shape(all_thresh)[2]))
-    for i in range(np.shape(all_thresh)[2]):
-        correct[0,i] = fPC(all_thresh[:,0,i], trainingLabels)
-    i_permutation = permutate(trainingFaces[0].flatten())[:,:,0].T
-    correct = np.append(correct, i_permutation, axis=0)
-    idx = correct.argsort()[0,-num_predictors:][::-1]
-    sorted_correct = correct[:,idx]
+    results = "n    trainingAccuracy        testingAccuracy\r\n"
+    for j in range(400, 401, 1):
+        # # with Pool(cpu_count()) as p:
+        # #     all_thresh = np.array(list(tqdm(p.imap(process_combinations, trainingFaces[:j]), total=len(trainingFaces[:j]))))
+        # print(np.shape(all_thresh))
+        # # find the best `num_predictors` in all possible combinations
+        # predictions = np.zeros((1,np.shape(all_thresh)[1]))
+        # for i in range(np.shape(all_thresh)[1]):
+        #     predictions[0,i] = fPC(all_thresh[:,i], trainingLabels[:j])
+        # print(i_permutation)
+        # predictions = np.append(predictions, i_permutation, axis=0)
+        # idx = predictions.argsort(axis=1)[0,-num_predictors:][::-1]
+        # sorted_predictions = predictions[:,idx]
+        # print(sorted_predictions)
 
-    # get c1,r1,c2,r2 from flattened indexes
-    predictors = np.array([np.unravel_index(a, (24,24)) for a in sorted_correct[1,:].astype(int)])
-    predictors = np.append(predictors, np.array([np.unravel_index(a, (24,24)) for a in sorted_correct[2,:].astype(int)]), axis=1)
-    
-    print("Predictors:")
-    print(np.shape(predictors))
-    print(predictors)
-    print("-------------------------")
-    print("Accuracy on training set:")
-    print(measureAccuracyOfPredictors(predictors, trainingFaces, trainingLabels))
-    print("Accuracy on testing set:")
-    print(measureAccuracyOfPredictors(predictors, testingFaces, testingLabels))
+        # get c1,r1,c2,r2 from flattened indexes
+        i_permutation = permutate(trainingFaces[0].flatten())[:,0:2].T
+        predict = np.array([np.unravel_index(a, (24,24)) for a in i_permutation[0,:].astype(int)])
+        predict = np.append(predict, np.array([np.unravel_index(a, (24,24)) for a in i_permutation[1,:].astype(int)]), axis=1)
+        predictors = []
+        for k in tqdm(range(num_predictors)):
+            best_score = 0
+            best_predictor = None
+            def _process_predictors(p):
+                # print(p)
+                test_predictors = predictors
+                test_predictors.append(p)
+                # print(test_predictors)
+                accuracy = measureAccuracyOfPredictors(np.array(test_predictors), trainingFaces[:j], trainingLabels[:j])
+                if accuracy > best_score:
+                   best_predictor = p
+                   best_score = accuracy
+            predictors = np.array(predictors.append(best_predictor))
+        # for i in range(np.shape(i_permutation)[0]):
+        #     predictions[0,i] = fPC(all_thresh[:,i], trainingLabels[:j])
+               
+        # print(predictors)
+        results = results + (str(j) + " " + str(measureAccuracyOfPredictors(predictors, trainingFaces[:j], trainingLabels[:j])) + "  " + str(measureAccuracyOfPredictors(predictors, testingFaces, testingLabels)) + "\r\n")
 
-    show = True
+    print(results)
+
+    show = False
     if show:
         # Show an arbitrary test image in grayscale
         im = testingFaces[1,:,:]
@@ -75,11 +94,11 @@ def stepwiseRegression (trainingFaces, trainingLabels, testingFaces, testingLabe
         plt.show()
 
 #%%
-def loadData (which, amount=2000):
+def loadData (which):
     faces = np.load("Homework1/{}ingFaces.npy".format(which))
     faces = faces.reshape(-1, 24, 24)  # Reshape from 576 to 24x24
     labels = np.load("Homework1/{}ingLabels.npy".format(which))
-    return faces[:amount,:,:], labels[:amount]
+    return faces, labels
 
 #%%
 if __name__ == "__main__":
