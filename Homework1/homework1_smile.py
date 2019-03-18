@@ -1,11 +1,12 @@
 #%%
-import numpy as np
-from tqdm import tqdm
+import itertools
 from multiprocessing import Pool
 from os import cpu_count
-import itertools
+
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
 
 #%%
 def fPC (y, yhat):
