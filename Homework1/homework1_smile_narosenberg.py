@@ -50,7 +50,6 @@ def stepwiseRegression (trainingFaces, trainingLabels, testingFaces, testingLabe
                 if accuracy > best_score and p.tolist() not in predictors:
                     best_predictor = p.tolist()
                     best_score = accuracy
-            print(best_predictor)
             predictors.append(best_predictor)
         predictors = np.array(predictors)
         results = results + (str(j) + "," + str(measureAccuracyOfPredictors(predictors, trainingFaces[:j], trainingLabels[:j])) + "," + str(measureAccuracyOfPredictors(predictors, testingFaces, testingLabels)) + "\r\n")
