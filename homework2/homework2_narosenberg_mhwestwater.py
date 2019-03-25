@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from copy import copy
 
 # Given an array of faces (N x M x M, where N is number of examples and M is number of pixes along each axis),
 # return a design matrix Xtilde ((M**2 + 1) x N) whose last row contains all 1s.
@@ -15,7 +16,9 @@ def fMSE (w, Xtilde, y):
 # Given a vector of weights w, a design matrix Xtilde, and a vector of labels y, and a regularization strength
 # alpha (default value of 0), return the gradient of the (regularized) MSE loss.
 def gradfMSE (w, Xtilde, y, alpha = 0.):
-    return (Xtilde.dot(Xtilde.T.dot(w) - y))/np.shape(Xtilde)[1] + (alpha/(2*np.shape(Xtilde)[1])) * w.T.dot(w)
+    w_reg = copy(w)
+    w_reg[-1,0] = 0
+    return (Xtilde.dot(Xtilde.T.dot(w) - y))/np.shape(Xtilde)[1] + (alpha/(2*np.shape(Xtilde)[1])) * w_reg.T.dot(w_reg)
 
 # Given a design matrix Xtilde and labels y, train a linear regressor for Xtilde and y using the analytical solution.
 def method1 (Xtilde, y):
