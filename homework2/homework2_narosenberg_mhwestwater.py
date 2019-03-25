@@ -57,12 +57,9 @@ def visualizeWeights(w1, w2, w3):
 
 def visualizeErrors(w, Xtilde, y, k=5):
     errors = (np.dot(Xtilde.T, w)) - y
-    print(errors)
     idx = errors.argsort(axis=0)[-k:][::-1]
     top_errors = Xtilde[:, idx]
-    print(np.shape(top_errors))
     top_predictions = errors[idx]
-    print(np.shape(top_predictions))
     top_labels = y[idx]
     fig, ax = plt.subplots(1,k, figsize=(15,9))
     for i in range(np.shape(top_errors)[1]):
