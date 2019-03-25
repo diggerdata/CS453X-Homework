@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 # Given an array of faces (N x M x M, where N is number of examples and M is number of pixes along each axis),
 # return a design matrix Xtilde ((M**2 + 1) x N) whose last row contains all 1s.
@@ -8,22 +9,25 @@ def reshapeAndAppend1s (faces):
 # Given a vector of weights w, a design matrix Xtilde, and a vector of labels y, return the (unregularized)
 # MSE.
 def fMSE (w, Xtilde, y):
-    return np.mean(((np.dot(Xtilde.T, w)) - y)**2) / 2
+    return np.mean(((np.dot(Xtilde.T, w)) - y)**2) / 2.0
 
 # Given a vector of weights w, a design matrix Xtilde, and a vector of labels y, and a regularization strength
 # alpha (default value of 0), return the gradient of the (regularized) MSE loss.
 def gradfMSE (w, Xtilde, y, alpha = 0.):
-    pass
+    return (Xtilde.dot(Xtilde.T.dot(w) - y))/np.shape(Xtilde)[1] + (alpha/(2*np.shape(Xtilde)[1])) * w.T.dot(w)
 
 # Given a design matrix Xtilde and labels y, train a linear regressor for Xtilde and y using the analytical solution.
 def method1 (Xtilde, y):
-    print(np.shape(Xtilde))
-    print(np.shape(y))
-    return np.linalg.inv(Xtilde.dot(Xtilde.T)).dot(Xtilde).dot(y)
+    return np.linalg.solve(Xtilde.dot(Xtilde.T),np.eye(len(Xtilde))).dot(Xtilde).dot(y)
 
 # Given a design matrix Xtilde and labels y, train a linear regressor for Xtilde and y using gradient descent on fMSE.
 def method2 (Xtilde, y):
-    pass
+    w = np.random.randn(np.shape(Xtilde)[0], 1) * 0.01
+    for i in tqdm(range(5000)):
+        grad = gradfMSE(w, Xtilde, y)
+        new_w = w - grad * 0.003
+        w = new_w
+    return w
 
 # Given a design matrix Xtilde and labels y, train a linear regressor for Xtilde and y using gradient descent on fMSE
 # with regularization.
@@ -43,10 +47,12 @@ if __name__ == "__main__":
     Xtilde_te = reshapeAndAppend1s(np.load("age_regression_Xte.npy"))
     yte = np.load("age_regression_yte.npy")
 
-    w1 = method1(Xtilde_tr, ytr)
-    print(fMSE(w1, Xtilde_tr, ytr))
-    print(fMSE(w1, Xtilde_te, yte))
-    # w2 = method2(Xtilde_tr, ytr)
+    # w1 = method1(Xtilde_tr, ytr)
+    # print(fMSE(w1, Xtilde_tr, ytr))
+    # print(fMSE(w1, Xtilde_te, yte))
+    w2 = method2(Xtilde_tr, ytr)
+    print(fMSE(w2, Xtilde_tr, ytr))
+    print(fMSE(w2, Xtilde_te, yte))
     # w3 = method3(Xtilde_tr, ytr)
 
     # Report fMSE cost using each of the three learned weight vectors
