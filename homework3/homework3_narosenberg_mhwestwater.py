@@ -38,10 +38,10 @@ def fSGD(X, y, num_epochs, batch_size, alpha=0.1):
     return w, loss_history
 
 def predict(X, y, w):
-    a = X.dot(w)
-    b = np.zeros_like(a)
-    b[np.arange(len(a)), a.argmax(1)] = 1
-    return b
+    p = X.dot(w)
+    y_hat = np.zeros_like(p)
+    y_hat[np.arange(p.shape[0]), p.argmax(1)] = 1
+    return y_hat
 
 def fPC(X, y, w):
     y_hat = predict(X, y, w)
