@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 def preprocess(data):
     return np.append(data, np.ones((len(data), 1)), axis=1)
@@ -34,7 +35,7 @@ def fSGD(X, y, num_epochs, batch_size, alpha=0.1):
             epoch_loss.append(loss)
             w += -alpha * gradient
         loss_history.append(np.average(epoch_loss))
-    return w
+    return w, loss_history
 
 def predict(X, y, w):
     a = X.dot(w)
@@ -52,8 +53,14 @@ if __name__ == '__main__':
     X_te = preprocess(np.load("small_mnist_test_images.npy"))
     y_te = np.load("small_mnist_test_labels.npy")
 
-    w = fSGD(X_tr, y_tr, 100, 100)
+    w, loss_history = fSGD(X_tr, y_tr, 100, 100)
     print('Training accuracy: ', fPC(X_tr, y_tr, w))
     print('Training CE: ', fCE(X_tr, y_tr, w))
     print('Testing accuracy: ', fPC(X_te, y_te, w))
     print('Testing CE: ', fCE(X_te, y_te, w))
+
+    plt.plot(loss_history)
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.title('Loss History')
+    plt.show()

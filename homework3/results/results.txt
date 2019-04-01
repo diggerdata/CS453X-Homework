@@ -1,0 +1,13 @@
+100 Epochs (Before Augmentation)
+---------------------------------
+Training accuracy:  0.98976
+Training CE:  0.19986731331180096
+Testing accuracy:  0.97616
+Testing CE:  0.42359128340339214
+
+500 Epochs (Before Augmentation)
+---------------------------------
+Training accuracy:  0.9962
+Training CE:  0.0992458275292167
+Testing accuracy:  0.9726
+Testing CE:  0.5108095222877485
