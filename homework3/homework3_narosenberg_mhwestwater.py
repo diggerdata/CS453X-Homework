@@ -1,29 +1,43 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
-def preprocess(data):
-    return np.append(data, np.ones((len(data), 1)), axis=1)
+
+def permutate(X, y):
+    """Shuffle data and lables."""
+    permutation = np.random.permutation(X.shape[0])
+    shuffled_X = X[permutation]
+    shuffled_y = y[permutation]
+    return shuffled_X, shuffled_y
+
+def preprocess(X):
+    """Preprocess data by appending ones to each sample."""
+    return np.append(X, np.ones((X.shape[0], 1)), axis=1)
 
 def softmax(X):
+    """Softmax function."""
     X -= np.max(X)
     return (np.exp(X).T / np.sum(np.exp(X), axis=1)).T
 
 def fGrad(X, y, w):
+    """Gradient of the error."""
     m = X.shape[0]
     p = softmax(X.dot(w))
     return -np.dot(X.T,(y - p)) / m
 
 def fCE(X, y, w):
+    """Compute the cross entropy of the prediction."""
     p = softmax(X.dot(w))
     m = y.shape[0]
     return -np.sum(y * np.log(p)) / m
  
 def next_batch(X, y, batch_size):
-	for i in np.arange(0, X.shape[0], batch_size):
-		yield (X[i:i + batch_size], y[i:i + batch_size])
+    """Get a batch of `batch_size` from training data."""
+    for i in np.arange(0, X.shape[0], batch_size):
+        yield (X[i:i + batch_size], y[i:i + batch_size])
 
 def fSGD(X, y, num_epochs, batch_size, alpha=0.1):
+    """Compute the stochastic gradient descent (SGD)."""
     w = np.random.randn(X.shape[1], 10) * 0.1
     loss_history = []
 
@@ -38,18 +52,24 @@ def fSGD(X, y, num_epochs, batch_size, alpha=0.1):
     return w, loss_history
 
 def predict(X, y, w):
+    """Get predictions from a dataset and weigts. The lables (y) need to be in 
+    one-hot form.
+    """
     p = X.dot(w)
     y_hat = np.zeros_like(p)
     y_hat[np.arange(p.shape[0]), p.argmax(1)] = 1
     return y_hat
 
 def fPC(X, y, w):
+    """Compute the fPC."""
     y_hat = predict(X, y, w)
     return np.mean(y_hat == y)
 
 if __name__ == '__main__':
     X_tr = preprocess(np.load("small_mnist_train_images.npy"))
     y_tr = np.load("small_mnist_train_labels.npy")
+    # Shuffle the training data
+    X_tr, y_tr = permutate(X_tr, y_tr)
     X_te = preprocess(np.load("small_mnist_test_images.npy"))
     y_te = np.load("small_mnist_test_labels.npy")
 
