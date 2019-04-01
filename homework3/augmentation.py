@@ -46,55 +46,75 @@ def add_noise(img, stdv=0.03, mu=0.03, n=28):
     return img + noise
 
 
+def sharpen(img_in, threshold=0.01, add=0.25):
+    img_out = np.zeros(img_in.shape)
+    idx = img_in > threshold
+    img_out[idx] = add
+    img_in += img_out
+    img_in[img_in > 1] = 1
+    return img_in
+
+
 if __name__ == "__main__":
     # Load data
     train = np.load("small_mnist_train_images.npy")
     train_label = np.load("small_mnist_train_labels.npy")
 
-    # img_out = translate_left(train[5], 12)
-    # print(train[5].shape)
-    # print(img_out.shape)
-    # plt.imshow(img_out.reshape((28, 28)))
-    # plt.show()
-
-
-    imgs = train
-    labels = train_label
+    imgs_out = train
+    labels_out = train_label
     rng.seed(123458)
+
+    SHARP = sharpen(train[5])
+    plt.imshow(train[5].reshape((28, 28)))
+    plt.show()
+    plt.imshow(SHARP.reshape((28, 28)))
+    plt.show()
 
     for j in range(2):
         transformed_imgs = np.zeros(train.shape)
+        transformed_labels = np.zeros(train_label.shape)
         for i, img in tqdm(enumerate(train)):
+            label = train_label[i]
+            label_digit = label.nonzero()[0][0]
             if j == 0:
-                transformed = translate_down(img, 27)
-                transformed = translate_right(transformed, 26)
+                img = translate_down(img, 27)
+                img = translate_right(img, 26)
             else:
-                # transformed = translate_up(img, 27)
-                # transformed = translate_left(transformed, 26)
-                transformed = add_noise(img)
+                img = translate_up(img, 27)
+                img = translate_left(img, 26)
 
-            rotated = rotate(transformed, rng.randint(1, 4) * (1 if rng.getrandbits(1) else -1))
-            # noised = add_noise(transformed)
-            transformed_imgs[i, :] = rotated
+            if label_digit in (0, 8):
+                img = rotate(img, 180)
 
-        imgs = np.concatenate([imgs, transformed_imgs])
-        labels = np.concatenate([labels, train_label])
+            # if label_digit in (6, 9):
+            #     img = rotate(img, 180)
+            #     label = np.zeros(10)
+            #     label[label_digit] = 1
 
-    i = 3002
+            img = sharpen(img)
+            # img = add_noise(img)
+            img = rotate(img, rng.randint(1, 4) * (1 if rng.getrandbits(1) else -1))
+            transformed_imgs[i, :] = img
+            transformed_labels[i, :] = label
 
-    print(imgs.shape)
+        imgs_out = np.concatenate([imgs_out, transformed_imgs])
+        labels_out = np.concatenate([labels_out, train_label])
+
+    i = 3004
+
+    print(imgs_out.shape)
     print(train_label.shape)
-    print(imgs.shape)
-    print(labels.shape)
+    print(imgs_out.shape)
+    print(labels_out.shape)
 
-    np.save("full_train.npy", imgs)
-    np.save("full_train_labels.npy", labels)
+    np.save("full_train.npy", imgs_out)
+    np.save("full_train_labels.npy", labels_out)
 
-    plt.imshow(imgs[i].reshape((28, 28)))
+    plt.imshow(imgs_out[i].reshape((28, 28)))
     plt.show()
-    plt.imshow(imgs[i+5000].reshape((28, 28)))
+    plt.imshow(imgs_out[i + 5000].reshape((28, 28)))
     plt.show()
-    plt.imshow(imgs[i+10000].reshape((28, 28)))
+    plt.imshow(imgs_out[i + 10000].reshape((28, 28)))
     plt.show()
 
     print(train_label[i])
