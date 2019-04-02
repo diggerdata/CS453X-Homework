@@ -46,7 +46,7 @@ def add_noise(img, stdv=0.03, mu=0.03, n=28):
     return img + noise
 
 
-def sharpen(img_in, threshold=0.01, add=0.25):
+def sharpen(img_in, threshold=0.005, add=0.25):
     img_out = np.zeros(img_in.shape)
     idx = img_in > threshold
     img_out[idx] = add
@@ -63,15 +63,9 @@ if __name__ == "__main__":
     imgs_out = train
     labels_out = train_label
     rng.seed(123458)
-
-    SHARP = sharpen(train[5])
-    plt.imshow(train[5].reshape((28, 28)))
-    plt.show()
-    plt.imshow(SHARP.reshape((28, 28)))
-    plt.show()
-
     for j in range(2):
         transformed_imgs = np.zeros(train.shape)
+        print(train.shape)
         transformed_labels = np.zeros(train_label.shape)
         for i, img in tqdm(enumerate(train)):
             label = train_label[i]
@@ -86,21 +80,16 @@ if __name__ == "__main__":
             if label_digit in (0, 8):
                 img = rotate(img, 180)
 
-            # if label_digit in (6, 9):
-            #     img = rotate(img, 180)
-            #     label = np.zeros(10)
-            #     label[label_digit] = 1
-
             img = sharpen(img)
-            # img = add_noise(img)
+            img = add_noise(img)
             img = rotate(img, rng.randint(1, 4) * (1 if rng.getrandbits(1) else -1))
             transformed_imgs[i, :] = img
             transformed_labels[i, :] = label
 
         imgs_out = np.concatenate([imgs_out, transformed_imgs])
-        labels_out = np.concatenate([labels_out, train_label])
+        labels_out = np.concatenate([labels_out, transformed_labels])
 
-    i = 3004
+    i = 3310
 
     print(imgs_out.shape)
     print(train_label.shape)
