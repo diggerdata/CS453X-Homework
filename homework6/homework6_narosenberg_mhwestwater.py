@@ -13,22 +13,29 @@ NUM_CHECK = 5  # Number of examples on which to check the gradient
 # and return the individual weights and biases W1, b1, W2, b2.
 # This is useful for performing a gradient check with check_grad.
 def unpack (w):
-    W1 = w[0]
-    b1 = w[1]
-    W2 = w[2]
-    b2 = w[3]
+    W1 = w[:(784*NUM_HIDDEN)].reshape(784, NUM_HIDDEN)
+    b1 = w[(784*NUM_HIDDEN):(784*NUM_HIDDEN+NUM_HIDDEN)].reshape(NUM_HIDDEN)
+    W2 = w[(784*NUM_HIDDEN+NUM_HIDDEN):(784*NUM_HIDDEN+NUM_HIDDEN+NUM_HIDDEN*10)].reshape(NUM_HIDDEN, 10)
+    b2 = w[(784*NUM_HIDDEN+NUM_HIDDEN+NUM_HIDDEN*10):].reshape(10)
     return W1, b1, W2, b2
+
+def unpackCache(w):
+    return w[0], w[1], w[2], w[3]
 
 # Given individual weights and biases W1, b1, W2, b2, concatenate them and
 # return a vector w containing all of them.
 # This is useful for performing a gradient check with check_grad.
 def pack (W1, b1, W2, b2):
-    return [W1, b1, W2, b2]
+    w= np.concatenate((W1,b1,W2,b2), axis=None)
+    return w
+
+def packCache(Z1, A1, Z2, A2):
+    return [Z1, A1, Z2, A2]
 
 # Load the images and labels from a specified dataset (train or test).
 def loadData (which):
-    images = np.load("small_mnist_{}_images.npy".format(which))
-    labels = np.load("small_mnist_{}_labels.npy".format(which))
+    images = np.load("mnist_{}_images.npy".format(which))
+    labels = np.load("mnist_{}_labels.npy".format(which))
     return images, labels
 
 def plotSGDPath (trainX, trainY, ws):
@@ -75,12 +82,12 @@ def forward(x, w):
     A1 = ReLU(Z1)
     Z2 = np.dot(A1, W2) + b2
     A2 = softmax(Z2)
-    cache = pack(Z1, A1, Z2, A2)
+    cache = packCache(Z1, A1, Z2, A2)
     return cache
 
 def backward(X, y, w, cache):
     W1, _, W2, _ = unpack(w)
-    Z1, A1, Z2, A2 = unpack(cache)
+    Z1, A1, Z2, A2 = unpackCache(cache)
     g = np.multiply((A2 - y).T * W2, dReLU(Z1.T))
     dW2 = (A2 - y) * ReLU(Z1).T
     db2 = A2 -y
@@ -94,7 +101,7 @@ def backward(X, y, w, cache):
 # will also need to modify slightly the gradient check code below).
 def fCE (X, y, w):
     p = forward(X, w)[3]
-    m = y.shape[0]*2
+    m = y.shape[0]
     return -np.sum(np.sum(y * np.log(p), axis=1), axis=0) / m
 
 # Given training images X, associated labels Y, and a vector of combined weights
@@ -104,7 +111,7 @@ def fCE (X, y, w):
 def gradCE (X, y, w, lambd=0.7):
     W1, _, W2, _ = unpack(w)
     m = X.shape[0]
-    Z1, A1, Z2, A2 = unpack(forward(X, w))
+    Z1, A1, Z2, A2 = unpackCache(forward(X, w))
     g = (np.multiply(np.dot(W2, (A2 - y).T), dReLU(Z1.T))).T
     dW2 = (1/m) * np.dot(ReLU(Z1).T, (A2 - y)) + (lambd/m)*W2
     db2 = np.mean(A2 - y, axis=0)
@@ -142,13 +149,14 @@ def fPC(X, y, w):
 # train the NN. Then return the sequence of w's obtained during SGD.
 def train (trainX, trainY, testX, testY, w, epochs=300, batch_size=256, learning_rate=0.1, print_loss=True):
     ws = np.copy(w)
-    for epoch in trange(epochs):
+    for epoch in trange(epochs, desc="Training"):
         for batch_x, batch_y in next_batch(trainX, trainY, batch_size): 
             grads = gradCE(batch_x, batch_y, ws)
             ws = updateWeights(ws, grads, learning_rate=learning_rate)
         if print_loss and epoch % 10:
             tqdm.write("Loss: {}".format(fCE(testX, testY, ws)))
-    print(fPC(testX, testY, ws))
+    print("Final loss: {}".format(fCE(testX, testY, ws)))
+    print("Final accuracy: {}".format(fPC(testX, testY, ws)))
     return ws
 
 if __name__ == "__main__":
@@ -166,10 +174,9 @@ if __name__ == "__main__":
 
     # Check that the gradient is correct on just a few examples (randomly drawn).
     idxs = np.random.permutation(trainX.shape[0])[0:NUM_CHECK]
-    print(gradCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w)[0].shape)
-    # print(scipy.optimize.check_grad(lambda w_: fCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w_), \
-    #                                 lambda w_: gradCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w_), \
-    #                                 w))
+    print(scipy.optimize.check_grad(lambda w_: fCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w_), \
+                                    lambda w_: gradCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w_, lambd=0.0), \
+                                    w))
 
     # Train the network and obtain the sequence of w's obtained using SGD.
     ws = train(trainX, trainY, testX, testY, w)
