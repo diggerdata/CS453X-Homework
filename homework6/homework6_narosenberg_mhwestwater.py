@@ -1,11 +1,14 @@
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import scipy.optimize
 from tqdm import tqdm, trange
+from random import choice
 
+global NUM_HIDDEN
 NUM_INPUT = 784  # Number of input neurons
-NUM_HIDDEN = 50  # Number of hidden neurons
+NUM_HIDDEN = 30  # Number of hidden neurons
 NUM_OUTPUT = 10  # Number of output neurons
 NUM_CHECK = 5  # Number of examples on which to check the gradient
 
@@ -147,23 +150,91 @@ def fPC(X, y, w):
 
 # Given training and testing datasets and an initial set of weights/biases b,
 # train the NN. Then return the sequence of w's obtained during SGD.
-def train (trainX, trainY, testX, testY, w, epochs=300, batch_size=256, learning_rate=0.1, print_loss=True):
+def train (trainX, trainY, testX, testY, w, epochs=25, batch_size=64, learning_rate=0.5, lambd=0.1, print_loss=False):
     ws = np.copy(w)
-    for epoch in trange(epochs, desc="Training"):
+    loss_history = []
+    for epoch in range(epochs):
         for batch_x, batch_y in next_batch(trainX, trainY, batch_size): 
-            grads = gradCE(batch_x, batch_y, ws)
+            grads = gradCE(batch_x, batch_y, ws, lambd=lambd)
             ws = updateWeights(ws, grads, learning_rate=learning_rate)
+        loss = fCE(testX, testY, ws)
+        loss_history.append(loss)
         if print_loss and epoch % 10:
-            tqdm.write("Loss: {}".format(fCE(testX, testY, ws)))
+            tqdm.write("Loss: {}".format(loss))
     print("Final loss: {}".format(fCE(testX, testY, ws)))
     print("Final accuracy: {}".format(fPC(testX, testY, ws)))
-    return ws
+    return ws, loss_history
+
+def findBestHyperparameters(trainX, trainY, testX, testY, validX, validY):
+    global NUM_HIDDEN
+    lr_c = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5]
+    hidden_c = [30, 40, 50]
+    bs_c = [16, 32, 64, 128, 256]
+    n_epochs_c = [25,50,100,200]
+    lambd_c = [0.1,0.3,0.5,0.7]
+    loss_history = []
+    chosen = []
+    for i in range(10):
+        NUM_HIDDEN = choice(hidden_c)
+        lr = choice(lr_c)
+        bs = choice(bs_c)
+        n_epochs = choice(n_epochs_c)
+        lambd = choice(lambd_c)
+        print("Hidden: {} Learning Rate: {} Batch Size: {}, Epochs: {} Lambda: {}".format(NUM_HIDDEN, lr, bs, n_epochs, lambd))
+        W1 = 2*(np.random.random(size=(NUM_INPUT, NUM_HIDDEN))/NUM_INPUT**0.5) - 1./NUM_INPUT**0.5
+        b1 = 0.01 * np.ones(NUM_HIDDEN)
+        W2 = 2*(np.random.random(size=(NUM_HIDDEN, NUM_OUTPUT))/NUM_HIDDEN**0.5) - 1./NUM_HIDDEN**0.5
+        b2 = 0.01 * np.ones(NUM_OUTPUT)
+        w = pack(W1, b1, W2, b2)
+        ws, _ = train(
+            trainX, 
+            trainY, 
+            testX, 
+            testY,
+            w,
+            epochs=n_epochs,
+            batch_size=bs,
+            learning_rate=lr,
+            lambd=lambd)
+        loss_history.append(fCE(validX, validY, ws))
+        chosen.append({'lr': lr, 'bs': bs, 'n_epochs': n_epochs, 'lambda': lambd, 'n_hidden': NUM_HIDDEN})
+    best = chosen[loss_history.index(min(loss_history))]
+    print("------------------------------------")
+    print("Best parameters:")
+    print("Hidden: {} Learning Rate: {} Batch Size: {}, Epochs: {} Lambda: {}".format(best['n_hidden'], best['lr'], best['bs'], best['n_epochs'], best['lambda']))
+    print("------------------------------------")
+    print('Training on best:')
+    NUM_HIDDEN = best['n_hidden']
+    W1 = 2*(np.random.random(size=(NUM_INPUT, NUM_HIDDEN))/NUM_INPUT**0.5) - 1./NUM_INPUT**0.5
+    b1 = 0.01 * np.ones(NUM_HIDDEN)
+    W2 = 2*(np.random.random(size=(NUM_HIDDEN, NUM_OUTPUT))/NUM_HIDDEN**0.5) - 1./NUM_HIDDEN**0.5
+    b2 = 0.01 * np.ones(NUM_OUTPUT)
+    w = pack(W1, b1, W2, b2)
+    ws, _ = train(
+            trainX, 
+            trainY, 
+            testX, 
+            testY,
+            w,
+            epochs=best['n_epochs'],
+            batch_size=best['bs'],
+            learning_rate=best['lr'],
+            lambd=best['lambda'])
+
+def plotLoss(loss_history):
+    fig = plt.figure()
+    plt.title("Loss for Last 20 Epochs")
+    plt.plot(range(len(loss_history)-20, len(loss_history)), loss_history[-20:])
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.show()
 
 if __name__ == "__main__":
     # Load data
     if "trainX" not in globals():
         trainX, trainY = loadData("train")
         testX, testY = loadData("test")
+        validX, validY = loadData("validation")
 
     # Initialize weights randomly
     W1 = 2*(np.random.random(size=(NUM_INPUT, NUM_HIDDEN))/NUM_INPUT**0.5) - 1./NUM_INPUT**0.5
@@ -178,8 +249,11 @@ if __name__ == "__main__":
                                     lambda w_: gradCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w_, lambd=0.0), \
                                     w))
 
+    # findBestHyperparameters(trainX, trainY, testX, testY, validX, validY)
+
     # Train the network and obtain the sequence of w's obtained using SGD.
-    ws = train(trainX, trainY, testX, testY, w)
+    ws, loss_history = train(trainX, trainY, testX, testY, w)
+    plotLoss(loss_history)
 
     # Plot the SGD trajectory
-    plotSGDPath(trainX, trainY, ws)
+    # plotSGDPath(trainX, trainY, ws)
