@@ -88,16 +88,6 @@ def forward(x, w):
     cache = packCache(Z1, A1, Z2, A2)
     return cache
 
-def backward(X, y, w, cache):
-    W1, _, W2, _ = unpack(w)
-    Z1, A1, Z2, A2 = unpackCache(cache)
-    g = np.multiply((A2 - y).T * W2, dReLU(Z1.T))
-    dW2 = (A2 - y) * ReLU(Z1).T
-    db2 = A2 -y
-    dW1 = g * X.T
-    db1 = g
-    return pack(dW1, db1, dW2, db2)
-
 # Given training images X, associated labels Y, and a vector of combined weights
 # and bias terms w, compute and return the cross-entropy (CE) loss. You might
 # want to extend this function to return multiple arguments (in which case you
@@ -210,7 +200,7 @@ def findBestHyperparameters(trainX, trainY, testX, testY, validX, validY):
     W2 = 2*(np.random.random(size=(NUM_HIDDEN, NUM_OUTPUT))/NUM_HIDDEN**0.5) - 1./NUM_HIDDEN**0.5
     b2 = 0.01 * np.ones(NUM_OUTPUT)
     w = pack(W1, b1, W2, b2)
-    ws, _ = train(
+    ws, loss_history = train(
             trainX, 
             trainY, 
             testX, 
@@ -220,6 +210,7 @@ def findBestHyperparameters(trainX, trainY, testX, testY, validX, validY):
             batch_size=best['bs'],
             learning_rate=best['lr'],
             lambd=best['lambda'])
+    plotLoss(loss_history)
 
 def plotLoss(loss_history):
     fig = plt.figure()
@@ -249,11 +240,11 @@ if __name__ == "__main__":
                                     lambda w_: gradCE(np.atleast_2d(trainX[idxs,:]), np.atleast_2d(trainY[idxs,:]), w_, lambd=0.0), \
                                     w))
 
-    # findBestHyperparameters(trainX, trainY, testX, testY, validX, validY)
+    findBestHyperparameters(trainX, trainY, testX, testY, validX, validY)
 
     # Train the network and obtain the sequence of w's obtained using SGD.
-    ws, loss_history = train(trainX, trainY, testX, testY, w)
-    plotLoss(loss_history)
+    # ws, loss_history = train(trainX, trainY, testX, testY, w)
+    # plotLoss(loss_history)
 
     # Plot the SGD trajectory
     # plotSGDPath(trainX, trainY, ws)
